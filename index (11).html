@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Биография</title>
+<script>try { if (localStorage.getItem('bio-theme') === 'dark') document.documentElement.classList.add('dark'); } catch (e) {}</script>
+<style>
+  /* Theme colours are registered so they animate smoothly when the theme changes */
+  @property --bg-1 { syntax: '<color>'; inherits: true; initial-value: #EFE6D8; }
+  @property --bg-2 { syntax: '<color>'; inherits: true; initial-value: #E2D5C1; }
+  @property --window { syntax: '<color>'; inherits: true; initial-value: #FBF8F3; }
+  @property --window-bar { syntax: '<color>'; inherits: true; initial-value: #F3EDE3; }
+  @property --line { syntax: '<color>'; inherits: true; initial-value: #E4DACB; }
+  @property --text { syntax: '<color>'; inherits: true; initial-value: #3A332B; }
+  @property --muted { syntax: '<color>'; inherits: true; initial-value: #8C8174; }
+  @property --accent { syntax: '<color>'; inherits: true; initial-value: #B89B76; }
+  @property --soft { syntax: '<color>'; inherits: true; initial-value: #EFE7DA; }
+  html {
+    transition: --bg-1 .6s ease, --bg-2 .6s ease, --window .6s ease, --window-bar .6s ease,
+      --line .6s ease, --text .6s ease, --muted .6s ease, --accent .6s ease, --soft .6s ease;
+  }
+  :root {
+    --bg-1: #EFE6D8;
+    --bg-2: #E2D5C1;
+    --window: #FBF8F3;
+    --window-bar: #F3EDE3;
+    --line: #E4DACB;
+    --text: #3A332B;
+    --muted: #8C8174;
+    --accent: #B89B76;
+    --soft: #EFE7DA;
+    --ease: cubic-bezier(.22, 1, .36, 1);
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: var(--font);
+    color: var(--text);
+    background: radial-gradient(120% 90% at 30% 20%, var(--bg-1) 0%, var(--bg-2) 100%);
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+
+  /* Menu bar */
+  .menubar {
+    position: fixed; top: 0; left: 0; right: 0; height: 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
+    background: rgba(251, 248, 243, 0.55);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(58, 51, 43, 0.06);
+    font-size: 13px; z-index: 1000;
+  }
+  .menubar .left, .menubar .right { display: flex; gap: 20px; align-items: center; }
+  .menubar .brand { font-weight: 700; }
+  .menubar .item {
+    color: var(--text); opacity: .85; padding: 2px 8px; margin: 0 -8px; border-radius: 5px;
+    transition: background-color .45s var(--ease), opacity .45s var(--ease);
+  }
+  .menubar .item:hover { background: rgba(58, 51, 43, 0.07); opacity: 1; }
+  .menubar .clock { font-variant-numeric: tabular-nums; }
+  #activeApp { display: inline-block; transition: opacity .25s var(--ease), transform .35s var(--ease); }
+  #activeApp.swap { opacity: 0; transform: translateY(-3px); }
+
+  /* Desktop */
+  .desktop {
+    position: absolute; inset: 28px 0 0 0;
+    padding: 32px 28px;
+    display: grid;
+    grid-template-columns: 96px;
+    grid-auto-rows: 112px;
+    gap: 8px;
+    justify-content: end;
+    align-content: start;
+  }
+  .icon {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 8px 4px; border-radius: 8px;
+    background: none; border: 0; cursor: default;
+    font-family: inherit; color: var(--text);
+    outline: none;
+    position: relative;
+    transition: transform .7s var(--ease);
+  }
+  .icon::before {
+    content: ""; position: absolute; inset: 0; border-radius: 12px;
+    background: rgba(251, 248, 243, 0.45);
+    opacity: 0; transform: scale(.92);
+    transition: opacity .5s var(--ease), transform .7s var(--ease);
+    z-index: -1;
+  }
+  .icon:hover { transform: translateY(-5px) scale(1.07); }
+  .icon:hover::before { opacity: 1; transform: scale(1); }
+  .icon:active { transform: translateY(-1px) scale(.97); transition-duration: .35s; }
+  .icon svg { width: 60px; height: 60px; filter: drop-shadow(0 2px 4px rgba(58,51,43,.10)); transition: filter .6s var(--ease); }
+  .icon:hover svg { filter: drop-shadow(0 6px 10px rgba(58,51,43,.14)); }
+  .icon span {
+    font-size: 12px; font-weight: 500; line-height: 1.25;
+    padding: 2px 6px; border-radius: 4px; text-align: center;
+    transition: background-color .45s var(--ease), color .45s var(--ease);
+  }
+  .icon.selected svg, .icon:focus-visible svg { filter: drop-shadow(0 2px 4px rgba(58,51,43,.10)) brightness(.92); }
+  .icon.selected span, .icon:focus-visible span { background: var(--accent); color: #fff; }
+
+  .watermark {
+    position: absolute; left: 40px; bottom: 104px;
+    pointer-events: none;
+    font-size: 13px; color: var(--muted); letter-spacing: .02em;
+    animation: fadeUp .9s var(--ease) both .15s;
+  }
+  .watermark b { display: block; font-size: 34px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; margin-bottom: 4px; opacity: .9; }
+  .desktop .icon { animation: fadeUp .9s var(--ease) backwards; }
+  .desktop .icon:nth-child(2) { animation-delay: .06s; }
+  .desktop .icon:nth-child(3) { animation-delay: .12s; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* Windows */
+  .window {
+    position: absolute;
+    background: var(--window);
+    border-radius: 12px;
+    border: 1px solid rgba(58, 51, 43, 0.08);
+    box-shadow: 0 1px 2px rgba(58,51,43,.06), 0 16px 40px rgba(58,51,43,.12);
+    display: none; flex-direction: column;
+    overflow: hidden;
+    min-width: 320px;
+    transform-origin: center;
+    will-change: transform, opacity;
+    contain: layout;
+    transition: box-shadow .6s var(--ease);
+  }
+  .window.open { display: flex; }
+  .window.active { box-shadow: 0 1px 2px rgba(58,51,43,.06), 0 24px 60px rgba(58,51,43,.20); }
+  .window.closing { pointer-events: none; }
+  .window.resizing {
+    transition: left .7s var(--ease), top .7s var(--ease), width .7s var(--ease), height .7s var(--ease),
+                border-radius .7s var(--ease), box-shadow .6s var(--ease);
+  }
+  .window.maximized { border-radius: 0; }
+
+  .titlebar {
+    height: 40px; flex-shrink: 0;
+    display: flex; align-items: center; padding: 0 14px;
+    background: var(--window-bar);
+    border-bottom: 1px solid var(--line);
+    cursor: default; position: relative;
+  }
+  .lights { display: flex; gap: 8px; z-index: 1; }
+  .lights button {
+    width: 12px; height: 12px; border-radius: 50%; border: 0; cursor: pointer;
+    background: #D9CDBB; padding: 0;
+    transition: background-color .5s var(--ease), transform .5s var(--ease);
+  }
+  .lights button:active { transform: scale(.88); transition-duration: .3s; }
+  .window.active .lights .close { background: #E0897B; }
+  .window.active .lights .min { background: #E6C27A; }
+  .window.active .lights .max { background: #A9C08E; }
+  .titlebar .title {
+    position: absolute; left: 0; right: 0; text-align: center;
+    font-size: 13px; font-weight: 600; color: var(--muted);
+    pointer-events: none;
+    transition: color .3s var(--ease);
+  }
+  .window.active .titlebar .title { color: var(--text); }
+  .content { flex: 1; overflow: auto; user-select: text; scroll-behavior: smooth; scrollbar-width: none; -ms-overflow-style: none; }
+  .content::-webkit-scrollbar, .window *::-webkit-scrollbar { display: none; width: 0; height: 0; }
+  .window * { scrollbar-width: none; }
+
+  /* Bio window */
+  .bio { padding: 48px 56px 56px; max-width: 720px; margin: 0 auto; }
+  .window.open .bio > * { animation: fadeUp .9s var(--ease) both .08s; }
+  .window.open .bio > *:nth-child(2) { animation-delay: .14s; }
+  .window.open .bio > *:nth-child(3) { animation-delay: .2s; }
+  .window.open .bio > *:nth-child(4) { animation-delay: .26s; }
+  .window.open .bio > *:nth-child(5) { animation-delay: .32s; }
+  .window.open .bio > *:nth-child(6) { animation-delay: .38s; }
+  .bio .avatar {
+    font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px; line-height: 1.3; font-weight: 500;
+    color: var(--accent);
+    white-space: pre; user-select: none;
+    margin-bottom: 28px;
+  }
+  .bio h1 { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+  .bio .subtitle { font-size: 16px; color: var(--muted); margin-top: 8px; }
+  .bio section { margin-top: 40px; }
+  .bio section + section { margin-top: 26px; }
+  .bio .name-label {
+    font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted); margin-bottom: 6px;
+  }
+  .bio h2 {
+    font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted); margin-bottom: 12px;
+  }
+  .placeholder { height: 12px; border-radius: 6px; background: var(--soft); margin-bottom: 10px; }
+  .placeholder.w80 { width: 80%; } .placeholder.w60 { width: 60%; } .placeholder.w40 { width: 40%; }
+
+  /* Finder-like windows */
+  .finder { display: flex; height: 100%; }
+  .sidebar {
+    width: 168px; flex-shrink: 0; padding: 16px 10px;
+    background: rgba(239, 231, 218, 0.5); border-right: 1px solid var(--line);
+    font-size: 13px;
+  }
+  .sidebar h3 { font-size: 11px; font-weight: 600; color: var(--muted); padding: 0 8px; margin: 0 0 6px; }
+  .sidebar div { padding: 6px 8px; border-radius: 6px; transition: background-color .5s var(--ease), transform .6s var(--ease); }
+  .sidebar div:hover { transform: translateX(2px); }
+  .sidebar div:hover:not(.on) { background: rgba(184, 155, 118, 0.10); }
+  .sidebar div.on { background: rgba(184, 155, 118, 0.22); }
+  .main { flex: 1; display: grid; place-items: center; padding: 24px; }
+  .empty { text-align: center; color: var(--muted); font-size: 14px; }
+  .window.open .empty { animation: fadeUp .7s var(--ease) both .08s; }
+  .empty svg { width: 48px; height: 48px; opacity: .55; margin-bottom: 12px; }
+
+  /* Dock */
+  .dock {
+    position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 8px; padding: 6px 8px;
+    background: rgba(251, 248, 243, 0.5);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(58, 51, 43, 0.08);
+    border-radius: 18px; z-index: 900;
+    animation: dockIn .9s var(--ease) both .1s;
+  }
+  @keyframes dockIn { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  .dock button {
+    width: 48px; height: 48px; border: 0; background: none; cursor: pointer;
+    position: relative; border-radius: 10px;
+    transform-origin: 50% 100%;
+    will-change: transform;
+  }
+  .dock button svg { width: 48px; height: 48px; }
+  .dock button::before {
+    content: attr(aria-label);
+    position: absolute; bottom: calc(100% + 12px); left: 50%;
+    transform: translate(-50%, 4px);
+    padding: 4px 10px; border-radius: 6px; white-space: nowrap;
+    font: 500 11px/1.3 var(--font); color: var(--text);
+    background: rgba(251, 248, 243, 0.85);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(58, 51, 43, 0.08);
+    opacity: 0; pointer-events: none;
+    transition: opacity .4s var(--ease), transform .6s var(--ease);
+  }
+  .dock button:hover::before { opacity: 1; transform: translate(-50%, 0); }
+  .dock button::after {
+    content: ""; position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+    width: 4px; height: 4px; border-radius: 50%; background: var(--text); opacity: 0;
+    transition: opacity .4s var(--ease);
+  }
+  .dock button.running::after { opacity: .6; }
+  /* While a window is dragged, the dock drops its live blur so nothing stutters underneath */
+  .dock { transition: background-color .6s ease, border-color .6s ease; }
+  .menubar { transition: background-color .6s ease, border-color .6s ease; }
+  body.dragging .dock, body.sizing .dock { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(246, 240, 231, 0.94); }
+  body.dragging .menubar, body.sizing .menubar { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(246, 240, 231, 0.96); }
+  body.dragging .window, body.sizing .window { transition: none; }
+  body.sizing, body.sizing * { user-select: none !important; }
+
+  /* Resize handles on window edges and corners */
+  .rz { position: absolute; z-index: 5; }
+  .rz-n, .rz-s { left: 12px; right: 12px; height: 7px; cursor: ns-resize; }
+  .rz-n { top: 0; } .rz-s { bottom: 0; }
+  .rz-e, .rz-w { top: 12px; bottom: 12px; width: 7px; cursor: ew-resize; }
+  .rz-e { right: 0; } .rz-w { left: 0; }
+  .rz-ne, .rz-nw, .rz-se, .rz-sw { width: 14px; height: 14px; }
+  .rz-ne { top: 0; right: 0; cursor: nesw-resize; }
+  .rz-sw { bottom: 0; left: 0; cursor: nesw-resize; }
+  .rz-nw { top: 0; left: 0; cursor: nwse-resize; }
+  .rz-se { bottom: 0; right: 0; cursor: nwse-resize; }
+  .window.maximized .rz { display: none; }
+
+
+
+  .desktop .icon:nth-child(4) { animation-delay: .18s; }
+  .desktop .icon:nth-child(5) { animation-delay: .24s; }
+
+  /* Theme toggle in the menu bar */
+  .theme-btn {
+    width: 24px; height: 22px; border: 0; background: none; color: var(--text);
+    border-radius: 5px; display: grid; place-items: center; cursor: pointer;
+    transition: background-color .45s var(--ease);
+  }
+  .theme-btn:hover { background: rgba(58, 51, 43, 0.07); }
+  .theme-btn svg {
+    grid-area: 1 / 1; width: 14px; height: 14px;
+    fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+    transition: opacity .5s var(--ease), transform .8s var(--ease);
+  }
+  html:not(.dark) .theme-btn .sun { opacity: 0; transform: rotate(-90deg) scale(.5); }
+  html.dark .theme-btn .moon { opacity: 0; transform: rotate(90deg) scale(.5); }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .7s; animation-timing-function: cubic-bezier(.22, 1, .36, 1); }
+
+  /* Warm dark theme */
+  html.dark {
+    --bg-1: #2E2721; --bg-2: #1C1815;
+    --window: #26211C; --window-bar: #2E2822;
+    --line: #3B332B; --text: #EDE4D6; --muted: #9C8F7F;
+    --accent: #C9A97E; --soft: #352D26;
+    color-scheme: dark;
+  }
+  html.dark .menubar { background: rgba(38, 33, 28, 0.55); border-bottom-color: rgba(255, 240, 220, 0.06); }
+  html.dark .menubar .item:hover, html.dark .theme-btn:hover { background: rgba(255, 240, 220, 0.08); }
+  html.dark .icon::before { background: rgba(255, 240, 220, 0.06); }
+  html.dark .window { border-color: rgba(255, 240, 220, 0.07); box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 40px rgba(0,0,0,.35); }
+  html.dark .window.active { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 24px 60px rgba(0,0,0,.5); }
+  html.dark .lights button { background: #4A4038; }
+  html.dark .sidebar { background: rgba(53, 45, 38, 0.5); }
+  html.dark .dock { background: rgba(38, 33, 28, 0.5); border-color: rgba(255, 240, 220, 0.07); }
+  html.dark .dock button::before { background: rgba(38, 33, 28, 0.85); border-color: rgba(255, 240, 220, 0.08); }
+  html.dark body.dragging .dock, html.dark body.sizing .dock { background: rgba(34, 29, 25, 0.94); }
+  html.dark body.dragging .menubar, html.dark body.sizing .menubar { background: rgba(34, 29, 25, 0.96); }
+
+  /* Notes */
+  .notes { display: flex; flex-direction: column; padding: 18px 28px 12px; }
+  .note-date { font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 14px; }
+  .notes textarea {
+    flex: 1; width: 100%; border: 0; outline: 0; resize: none; background: transparent;
+    color: var(--text); font: 400 15px/1.65 var(--font); caret-color: var(--accent);
+  }
+  .notes textarea::placeholder { color: var(--muted); opacity: .7; }
+  .note-status { font-size: 11px; color: var(--muted); text-align: right; margin-top: 8px; transition: opacity .4s var(--ease); }
+  .window.open .notes > * { animation: fadeUp .7s var(--ease) both .08s; }
+
+
+
+  /* Text pages (games, personal life) */
+  .textpage { padding: 30px 34px 36px; font-size: 15px; line-height: 1.6; color: var(--text); }
+  .textpage > * + * { margin-top: 16px; }
+  .chips { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips li {
+    padding: 7px 14px; border-radius: 999px; font-size: 14px;
+    background: var(--soft); border: 1px solid var(--line);
+    transition: transform .6s var(--ease), border-color .45s var(--ease);
+  }
+  .chips li:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .chips li b { font-weight: 600; }
+  .chips li span { color: var(--muted); font-style: italic; }
+  .window.open .textpage > * { animation: fadeUp .7s var(--ease) both; }
+  .window.open .textpage > :nth-child(1) { animation-delay: .08s; }
+  .window.open .textpage > :nth-child(2) { animation-delay: .16s; }
+  .window.open .textpage > :nth-child(3) { animation-delay: .24s; }
+
+  /* Bio text + pill buttons */
+  .bio .lead { font-size: 17px; line-height: 1.55; }
+  .bio .lead.muted { color: var(--text); margin-top: 4px; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px 10px 14px; border-radius: 999px;
+    background: var(--soft); border: 1px solid var(--line); color: var(--text);
+    font: 500 14px/1 var(--font); text-decoration: none; cursor: pointer;
+    transition: transform .6s var(--ease), background-color .45s var(--ease), box-shadow .6s var(--ease), border-color .45s var(--ease);
+  }
+  .pill svg { width: 18px; height: 18px; fill: currentColor; opacity: .85; transition: transform .6s var(--ease); }
+  .pill:hover { transform: translateY(-2px); background: var(--window); border-color: var(--accent); box-shadow: 0 8px 20px rgba(58, 51, 43, 0.10); }
+  .pill:hover svg { transform: scale(1.1); }
+  .pill:active { transform: translateY(0) scale(.97); transition-duration: .25s; }
+  html.dark .pill:hover { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35); }
+
+  /* Dock items that only appear while their window is open */
+  .dock button.transient { width: 0; margin: 0 -4px; opacity: 0; pointer-events: none; overflow: visible;
+    transition: width .6s var(--ease), margin .6s var(--ease), opacity .45s var(--ease); }
+  .dock button.transient.running { width: 48px; margin: 0; opacity: 1; pointer-events: auto; }
+
+  @media (max-width: 640px) {
+    .menubar .item { display: none; }
+    .desktop { justify-content: start; grid-template-columns: repeat(3, 96px); }
+    .watermark { left: 24px; bottom: 104px; }
+    .window { left: 8px !important; right: 8px; top: 40px !important; width: auto !important; height: calc(100% - 120px) !important; min-width: 0; }
+    .bio { padding: 32px 24px 40px; }
+    .sidebar { display: none; }
+    .rz { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-folder" viewBox="0 0 64 64">
+      <path d="M6 16a4 4 0 0 1 4-4h14l5 5h25a4 4 0 0 1 4 4v4H6z" fill="#C8AE89"/>
+      <rect x="6" y="21" width="52" height="33" rx="4" fill="#D9C3A2"/>
+      <rect x="6" y="21" width="52" height="2" fill="#E6D4B8"/>
+    </symbol>
+    <symbol id="i-trash" viewBox="0 0 64 64">
+      <rect x="14" y="14" width="36" height="5" rx="2.5" fill="#C9BBA6"/>
+      <path d="M17 21h30l-2.6 31a4 4 0 0 1-4 3.7H23.6a4 4 0 0 1-4-3.7z" fill="#EAE1D3" stroke="#CDBFA9" stroke-width="1.5"/>
+      <path d="M26 27v22M32 27v22M38 27v22" stroke="#CDBFA9" stroke-width="1.5" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-bio" viewBox="0 0 64 64">
+      <rect x="6" y="6" width="52" height="52" rx="13" fill="#FBF8F3" stroke="#E0D4C2" stroke-width="1.5"/>
+      <circle cx="32" cy="26" r="8" fill="#B89B76"/>
+      <path d="M18 47c2-7.5 7.5-11 14-11s12 3.5 14 11" fill="#D9C3A2"/>
+    </symbol>
+    <symbol id="i-notes" viewBox="0 0 64 64">
+      <rect x="8" y="6" width="48" height="52" rx="10" fill="#FBF8F3" stroke="#E0D4C2" stroke-width="1.5"/>
+      <path d="M8.75 16A9.25 9.25 0 0 1 18 6.75h28A9.25 9.25 0 0 1 55.25 16v4H8.75z" fill="#E3C88F"/>
+      <path d="M17 30h30M17 38h30M17 46h19" stroke="#D9CDBB" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-games" viewBox="0 0 64 64">
+      <rect x="6" y="6" width="52" height="52" rx="13" fill="#B89B76"/>
+      <g transform="translate(14 14) scale(1.5)" fill="#FBF8F3"><path d="M7.5 7h9a5 5 0 0 1 4.9 6l-.8 4a2.6 2.6 0 0 1-4.5 1.2L14.3 16H9.7l-1.8 2.2A2.6 2.6 0 0 1 3.4 17l-.8-4a5 5 0 0 1 4.9-6zM7.5 10v1.2H6.3v1.6h1.2V14h1.6v-1.2h1.2v-1.6H9.1V10zm8.3.3a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-2 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></g>
+    </symbol>
+    <symbol id="i-projects" viewBox="0 0 64 64">
+      <rect x="6" y="6" width="52" height="52" rx="13" fill="#C8AE89"/>
+      <g transform="translate(14 14) scale(1.5)" fill="#FBF8F3"><path d="M9 4h6a2 2 0 0 1 2 2v1h2.5A2.5 2.5 0 0 1 22 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-15A2.5 2.5 0 0 1 2 17.5v-8A2.5 2.5 0 0 1 4.5 7H7V6a2 2 0 0 1 2-2zm0 2v1h6V6zM2 12.2c2.9 1.3 6.3 2 10 2s7.1-.7 10-2v1.7c-3 1.2-6.4 1.8-10 1.8S5 15.1 2 13.9z"/></g>
+    </symbol>
+    <symbol id="i-life" viewBox="0 0 64 64">
+      <rect x="6" y="6" width="52" height="52" rx="13" fill="#D4A99A"/>
+      <g transform="translate(14 15) scale(1.5)" fill="#FBF8F3"><path d="M12 20.5s-8.5-5.1-8.5-11A4.8 4.8 0 0 1 8.3 4.7c1.5 0 2.9.7 3.7 1.9a4.5 4.5 0 0 1 3.7-1.9 4.8 4.8 0 0 1 4.8 4.8c0 5.9-8.5 11-8.5 11z"/></g>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="menubar">
+  <div class="left">
+    <span class="brand">●</span>
+    <span class="brand" id="activeApp">Finder</span>
+    <span class="item">Файл</span>
+    <span class="item">Правка</span>
+    <span class="item">Вид</span>
+  </div>
+  <div class="right">
+    <button class="theme-btn" id="themeBtn" aria-label="Сменить тему">
+      <svg class="moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+      <svg class="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
+    </button>
+    <span class="clock" id="clock"></span>
+  </div>
+</header>
+
+<main class="desktop" id="desktop">
+  <button class="icon" data-app="bio" aria-label="Открыть Биографию">
+    <svg><use href="#i-bio"/></svg><span>Биография</span>
+  </button>
+  <button class="icon" data-app="files" aria-label="Открыть Мои файлы">
+    <svg><use href="#i-folder"/></svg><span>Мои файлы</span>
+  </button>
+  <button class="icon" data-app="trash" aria-label="Открыть Корзину">
+    <svg><use href="#i-trash"/></svg><span>Корзина</span>
+  </button>
+  <button class="icon" data-app="notes" aria-label="Открыть Заметки">
+    <svg><use href="#i-notes"/></svg><span>Заметки</span>
+  </button>
+</main>
+
+<div class="watermark"><b>Привет.</b>Откройте «Биографию», чтобы познакомиться.</div>
+
+<section class="window" id="win-bio" data-title="Биография" style="left: 12%; top: 9%; width: 640px; height: 72%;">
+  <div class="titlebar">
+    <div class="lights"><button class="close" aria-label="Close"></button><button class="min" aria-label="Minimize"></button><button class="max" aria-label="Maximize"></button></div>
+    <div class="title">Биография</div>
+  </div>
+  <div class="content">
+    <article class="bio">
+<pre class="avatar" aria-hidden="true">
+  |\      _,,,---,,_
+  /,`.-'`'    -.  ;-;;,_
+ |,4-  ) )-,_. ,\ (  `'-'
+'---''(_/--'  `-'\_)</pre>
+      <p class="name-label">мое имя:</p>
+      <h1>дедлайн</h1>
+      <section>
+        <h2>Обо мне</h2>
+        <p class="lead">привет! я дедлайн (ака dln/deadline)</p>
+        <p class="lead muted">что ты хочешь обо мне узнать?</p>
+        <div class="btn-row">
+          <button class="pill" data-open="games"><svg viewBox="0 0 24 24"><path d="M7.5 7h9a5 5 0 0 1 4.9 6l-.8 4a2.6 2.6 0 0 1-4.5 1.2L14.3 16H9.7l-1.8 2.2A2.6 2.6 0 0 1 3.4 17l-.8-4a5 5 0 0 1 4.9-6zM7.5 10v1.2H6.3v1.6h1.2V14h1.6v-1.2h1.2v-1.6H9.1V10zm8.3.3a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-2 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg><span>игры</span></button>
+          <button class="pill" data-open="projects"><svg viewBox="0 0 24 24"><path d="M9 4h6a2 2 0 0 1 2 2v1h2.5A2.5 2.5 0 0 1 22 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-15A2.5 2.5 0 0 1 2 17.5v-8A2.5 2.5 0 0 1 4.5 7H7V6a2 2 0 0 1 2-2zm0 2v1h6V6zM2 12.2c2.9 1.3 6.3 2 10 2s7.1-.7 10-2v1.7c-3 1.2-6.4 1.8-10 1.8S5 15.1 2 13.9z"/></svg><span>проекты</span></button>
+          <button class="pill" data-open="life"><svg viewBox="0 0 24 24"><path d="M12 20.5s-8.5-5.1-8.5-11A4.8 4.8 0 0 1 8.3 4.7c1.5 0 2.9.7 3.7 1.9a4.5 4.5 0 0 1 3.7-1.9 4.8 4.8 0 0 1 4.8 4.8c0 5.9-8.5 11-8.5 11z"/></svg><span>личная жизнь</span></button>
+        </div>
+      </section>
+      <section>
+        <h2>Контакты</h2>
+        <div class="btn-row">
+          <a class="pill" href="https://discord.com/users/1172596818543132724" target="_blank" rel="noopener" data-link="discord"><svg viewBox="0 0 24 24"><path d="M19.3 5.3A16.6 16.6 0 0 0 15.2 4l-.5 1a15.4 15.4 0 0 0-5.4 0l-.5-1a16.6 16.6 0 0 0-4.1 1.3C2.1 9.2 1.4 13 1.8 16.8a16.8 16.8 0 0 0 5 2.5l1.1-1.7a10.8 10.8 0 0 1-1.7-.8l.4-.3a11.9 11.9 0 0 0 10.8 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.7a16.8 16.8 0 0 0 5-2.5c.5-4.4-.7-8.2-2.9-11.5zM8.7 14.5c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg><span>discord</span></a>
+          <a class="pill" href="https://t.me/deadlinesfg" target="_blank" rel="noopener" data-link="telegram"><svg viewBox="0 0 24 24"><path d="M21.4 4.2 2.9 11.4c-1.1.4-1 1.7 0 2l4.6 1.4 1.8 5.5c.2.8 1.2 1 1.7.4l2.6-2.5 4.7 3.5c.7.5 1.6.1 1.8-.7l3-14.8c.2-1-.7-1.7-1.7-1.3zM9.9 14.4l7.9-6.8-6.4 8-.4 3z"/></svg><span>telegram</span></a>
+        </div>
+      </section>
+    </article>
+  </div>
+</section>
+
+<section class="window" id="win-files" data-title="Мои файлы" style="left: 22%; top: 16%; width: 600px; height: 400px;">
+  <div class="titlebar">
+    <div class="lights"><button class="close" aria-label="Close"></button><button class="min" aria-label="Minimize"></button><button class="max" aria-label="Maximize"></button></div>
+    <div class="title">Мои файлы</div>
+  </div>
+  <div class="content finder">
+    <aside class="sidebar">
+      <h3>Избранное</h3>
+      <div class="on">Мои файлы</div>
+      <div>Документы</div>
+      <div>Фото</div>
+    </aside>
+    <div class="main">
+      <div class="empty"><svg><use href="#i-folder"/></svg><p>Здесь пока пусто</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="window" id="win-trash" data-title="Корзина" style="left: 30%; top: 22%; width: 520px; height: 340px;">
+  <div class="titlebar">
+    <div class="lights"><button class="close" aria-label="Close"></button><button class="min" aria-label="Minimize"></button><button class="max" aria-label="Maximize"></button></div>
+    <div class="title">Корзина</div>
+  </div>
+  <div class="content">
+    <div class="main" style="height:100%">
+      <div class="empty"><svg><use href="#i-trash"/></svg><p>Корзина пуста</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="window" id="win-notes" data-title="Заметки" style="left: 18%; top: 12%; width: 480px; height: 420px;">
+  <div class="titlebar">
+    <div class="lights"><button class="close" aria-label="Close"></button><button class="min" aria-label="Minimize"></button><button class="max" aria-label="Maximize"></button></div>
+    <div class="title">Заметки</div>
+  </div>
+  <div class="content notes">
+    <div class="note-date" id="noteDate"></div>
+    <textarea id="noteText" placeholder="Начните писать…" spellcheck="false"></textarea>
+    <div class="note-status" id="noteStatus">Сохраняется автоматически</div>
+  </div>
+</section>
+
+<section class="window" id="win-games" data-title="Игры" style="left: 34%; top: 18%; width: 460px; height: 360px;">
+  <div class="titlebar">
+    <div class="lights"><button class="close" aria-label="Close"></button><button class="min" aria-label="Minimize"></button><button class="max" aria-label="Maximize"></button></div>
+    <div class="title">Игры</div>
+  </div>
+  <div class="content">
+    <div class="textpage">
+      <p>я не часто успеваю играть в игры, так как учеба давит, но из любимых могу выделить:</p>
+      <ul class="chips">
+        <li><b>гд</b> <span>игра, без которой вы бы меня не знали :P</span></li>
+        <li><b>кс2</b></li>
+        <li><b>майн</b></li>
+        <li><b>гаррис мод</b></li>
+      </ul>
+      <p>очень люблю играть с друзьями, и не против поболтать в войсе</p>
+    </div>
+  </div>
+</section>
+
+<section class="window" id="win-projects" data-title="Проекты" style="left: 38%; top: 22%; width: 460px; height: 360px;">
+  <div class="titlebar">
+    <div class="lights"><button class="close" aria-label="Close"></button><button class="min" aria-label="Minimize"></button><button class="max" aria-label="Maximize"></button></div>
+    <div class="title">Проекты</div>
+  </div>
+  <div class="content">
+    <div class="main" style="height:100%">
+      <div class="empty"><svg><use href="#i-projects"/></svg><p>проекты в данный момент отсутствуют</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="window" id="win-life" data-title="Личная жизнь" style="left: 30%; top: 26%; width: 460px; height: 360px;">
+  <div class="titlebar">
+    <div class="lights"><button class="close" aria-label="Close"></button><button class="min" aria-label="Minimize"></button><button class="max" aria-label="Maximize"></button></div>
+    <div class="title">Личная жизнь</div>
+  </div>
+  <div class="content">
+    <div class="textpage">
+      <p>в последнее время я стал посвящать большую часть своего свободного времени учебе, ааээ хз че написать, скоро создам свой блог!</p>
+    </div>
+  </div>
+</section>
+
+<nav class="dock" aria-label="Dock">
+  <button data-app="bio" aria-label="Биография"><svg><use href="#i-bio"/></svg></button>
+  <button data-app="files" aria-label="Мои файлы"><svg><use href="#i-folder"/></svg></button>
+  <button data-app="trash" aria-label="Корзина"><svg><use href="#i-trash"/></svg></button>
+  <button data-app="notes" aria-label="Заметки"><svg><use href="#i-notes"/></svg></button>
+</nav>
+
+<script>
+  // Clock
+  const clock = document.getElementById('clock');
+  const tick = () => {
+    const d = new Date();
+    const day = d.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' });
+    const time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    clock.textContent = day.replace('.', '') + '  ' + time;
+  };
+  tick(); setInterval(tick, 10000);
+
+  const reduceMotion = false;
+  const EASE_OUT = 'cubic-bezier(.22, 1, .36, 1)';
+  const EASE_IN_OUT = 'cubic-bezier(.65, 0, .35, 1)';
+
+  // Physically based spring for the open animation (sampled once)
+  const SPRING = (() => {
+    const k = 210, c = 24, dt = 1 / 120, pts = [];
+    let x = 0, v = 0, t = 0;
+    while (t < 0.9) {
+      const a = -k * (x - 1) - c * v;
+      v += a * dt; x += v * dt; t += dt;
+      pts.push(x);
+    }
+    pts[pts.length - 1] = 1;
+    return { pts, duration: Math.round(t * 1000) };
+  })();
+  const openFrames = (() => {
+    const n = 36, out = [];
+    for (let i = 0; i <= n; i++) {
+      const f = i / n;
+      const p = SPRING.pts[Math.min(SPRING.pts.length - 1, Math.round(f * (SPRING.pts.length - 1)))];
+      const o = Math.min(1, f / 0.3);
+      out.push({
+        offset: f,
+        transform: 'translateY(' + (28 * (1 - p)).toFixed(2) + 'px) scale(' + (0.86 + 0.14 * p).toFixed(4) + ')',
+        opacity: (1 - Math.pow(1 - o, 3)).toFixed(3)
+      });
+    }
+    out[n].transform = 'none'; out[n].opacity = 1;
+    return out;
+  })();
+
+  let z = 10;
+  const activeApp = document.getElementById('activeApp');
+  const windows = document.querySelectorAll('.window');
+
+  // Smoothly swap the app name in the menu bar
+  function setAppName(name) {
+    if (activeApp.textContent === name) return;
+    if (reduceMotion) { activeApp.textContent = name; return; }
+    activeApp.classList.add('swap');
+    clearTimeout(activeApp._t);
+    activeApp._t = setTimeout(() => { activeApp.textContent = name; activeApp.classList.remove('swap'); }, 160);
+  }
+
+  function focusWin(win) {
+    windows.forEach(w => w.classList.remove('active'));
+    win.classList.add('active');
+    win.style.zIndex = ++z;
+    setAppName(win.dataset.title);
+  }
+
+  function updateDock() {
+    document.querySelectorAll('.dock button').forEach(b => {
+      const w = document.getElementById('win-' + b.dataset.app);
+      b.classList.toggle('running', (w.classList.contains('open') && !w.classList.contains('closing')) || !!w.dataset.minimized);
+    });
+  }
+
+  // Transform that shrinks a window into its Dock icon
+  function toDock(win) {
+    const name = win.id.replace('win-', '');
+    const btn = document.querySelector('.dock button[data-app="' + name + '"]');
+    if (!btn) return 'translateY(16px) scale(.9)';
+    const b = btn.getBoundingClientRect();
+    const r = win.getBoundingClientRect();
+    const dx = (b.left + b.width / 2) - (r.left + r.width / 2);
+    const dy = (b.top + b.height / 2) - (r.top + r.height / 2);
+    return 'translate(' + dx + 'px, ' + dy + 'px) scale(.06)';
+  }
+
+  function openApp(name) {
+    const win = document.getElementById('win-' + name);
+    if (win.classList.contains('open') && !win.classList.contains('closing')) { focusWin(win); return; }
+    win.getAnimations().forEach(a => a.cancel());
+    win.classList.remove('closing');
+    win.classList.add('open');
+    focusWin(win);
+    const fromDock = !!win.dataset.minimized;
+    delete win.dataset.minimized;
+    updateDock();
+    if (reduceMotion) return;
+    if (fromDock) {
+      win.animate(
+        [{ transform: toDock(win), opacity: 0 },
+         { opacity: 1, offset: .4 },
+         { transform: 'none', opacity: 1 }],
+        { duration: 750, easing: EASE_OUT }
+      );
+    } else {
+      win.animate(openFrames, { duration: SPRING.duration, easing: 'linear' });
+    }
+  }
+
+  function closeWin(win, minimize) {
+    if (win.classList.contains('closing')) return;
+    win.classList.add('closing');
+    win.classList.remove('active');
+    if (minimize) win.dataset.minimized = '1';
+    const top = [...windows]
+      .filter(w => w.classList.contains('open') && !w.classList.contains('closing'))
+      .sort((a, b) => b.style.zIndex - a.style.zIndex)[0];
+    if (top) focusWin(top); else setAppName('Finder');
+    win.style.zIndex = ++z; // keep the closing window above the others so its animation stays visible
+    updateDock();
+    const finish = () => { win.classList.remove('open', 'closing'); updateDock(); };
+    if (reduceMotion) { finish(); return; }
+    const anim = minimize
+      ? win.animate([{ transform: 'none', opacity: 1 },
+                     { opacity: 1, offset: .6 },
+                     { transform: toDock(win), opacity: 0 }],
+          { duration: 680, easing: EASE_IN_OUT, fill: 'forwards' })
+      : win.animate([{ transform: 'none', opacity: 1 },
+                     { transform: 'translateY(6px) scale(.96)', opacity: 0 }],
+          { duration: 420, easing: 'cubic-bezier(.33, 0, .2, 1)', fill: 'forwards' });
+    anim.onfinish = () => { finish(); anim.cancel(); };
+  }
+
+  // Desktop icons: a single click (or Enter) opens the app
+  const icons = document.querySelectorAll('.icon');
+  icons.forEach(icon => {
+    icon.addEventListener('click', e => {
+      e.stopPropagation();
+      icons.forEach(i => i.classList.remove('selected'));
+      icon.classList.add('selected');
+      openApp(icon.dataset.app);
+    });
+    icon.addEventListener('keydown', e => { if (e.key === 'Enter') openApp(icon.dataset.app); });
+  });
+  const topWin = () => [...windows]
+    .filter(w => w.classList.contains('open') && !w.classList.contains('closing'))
+    .sort((a, b) => b.style.zIndex - a.style.zIndex)[0];
+
+  // Click on empty desktop closes the front window
+  document.getElementById('desktop').addEventListener('click', () => {
+    icons.forEach(i => i.classList.remove('selected'));
+    const w = topWin(); if (w) closeWin(w, false);
+  });
+  // Esc closes the front window
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { const w = topWin(); if (w) closeWin(w, false); } });
+
+  // Dock: click opens the app; clicking the active app again sends it to the Dock
+  document.querySelectorAll('.dock button').forEach(b => b.addEventListener('click', () => {
+    const w = document.getElementById('win-' + b.dataset.app);
+    if (w.classList.contains('active') && w.classList.contains('open') && !w.classList.contains('closing')) closeWin(w, true);
+    else openApp(b.dataset.app);
+  }));
+
+  // Dock: continuous macOS-style magnification that follows the cursor
+  (() => {
+    const dock = document.querySelector('.dock');
+    const btns = [...dock.querySelectorAll('button')];
+    const cur = btns.map(() => 1);
+    let target = btns.map(() => 1), frame = null;
+    const loop = () => {
+      let moving = false;
+      btns.forEach((b, i) => {
+        cur[i] += (target[i] - cur[i]) * 0.14;
+        if (Math.abs(target[i] - cur[i]) > 0.001) moving = true; else cur[i] = target[i];
+        const s = cur[i];
+        b.style.transform = 'translateY(' + (-(s - 1) * 26) + 'px) scale(' + s + ')';
+      });
+      frame = moving ? requestAnimationFrame(loop) : null;
+    };
+    const kick = () => { if (!frame && !reduceMotion) frame = requestAnimationFrame(loop); };
+    dock.addEventListener('mousemove', e => {
+      target = btns.map(b => {
+        const r = b.getBoundingClientRect();
+        const d = Math.abs(e.clientX - (r.left + r.width / 2));
+        return 1 + 0.42 * Math.exp(-(d * d) / (2 * 46 * 46));
+      });
+      kick();
+    });
+    dock.addEventListener('mouseleave', () => { target = btns.map(() => 1); kick(); });
+  })();
+
+  windows.forEach(win => {
+    win.addEventListener('mousedown', () => focusWin(win));
+    const toggleMax = () => {
+      win.classList.add('resizing');
+      clearTimeout(win._resizeT);
+      win._resizeT = setTimeout(() => win.classList.remove('resizing'), 760);
+      win.classList.toggle('maximized', !win.dataset.max);
+      if (win.dataset.max) {
+        Object.assign(win.style, JSON.parse(win.dataset.max)); delete win.dataset.max;
+      } else {
+        win.dataset.max = JSON.stringify({ left: win.style.left, top: win.style.top, width: win.style.width, height: win.style.height });
+        Object.assign(win.style, { left: '0px', top: '28px', width: '100vw', height: 'calc(100vh - 28px)' });
+      }
+    };
+
+    win.querySelector('.close').addEventListener('click', e => { e.stopPropagation(); closeWin(win, false); });
+    win.querySelector('.min').addEventListener('click', e => { e.stopPropagation(); closeWin(win, true); });
+    win.querySelector('.max').addEventListener('click', e => { e.stopPropagation(); toggleMax(); });
+
+    // Smooth drag: moves with a GPU transform (no layout work per frame),
+    // and commits the final position only once the window settles.
+    const bar = win.querySelector('.titlebar');
+    bar.addEventListener('pointerdown', e => {
+      if (e.button !== 0 || e.target.closest('.lights') || window.innerWidth <= 640 || win.dataset.max) return;
+      win.getAnimations().forEach(a => a.finish());
+      const r = win.getBoundingClientRect();
+      const x0 = r.left, y0 = r.top;
+      const dx = e.clientX - x0, dy = e.clientY - y0;
+      let tx = x0, ty = y0, cx = x0, cy = y0, dragging = true, frame = null;
+      document.body.classList.add('dragging');
+      bar.setPointerCapture(e.pointerId);
+      const loop = () => {
+        cx += (tx - cx) * 0.4;
+        cy += (ty - cy) * 0.4;
+        if (Math.abs(tx - cx) < 0.2 && Math.abs(ty - cy) < 0.2) { cx = tx; cy = ty; }
+        win.style.transform = 'translate3d(' + (cx - x0) + 'px,' + (cy - y0) + 'px,0)';
+        if (dragging || cx !== tx || cy !== ty) { frame = requestAnimationFrame(loop); return; }
+        frame = null;
+        win.style.left = cx + 'px'; win.style.top = cy + 'px'; win.style.transform = '';
+        document.body.classList.remove('dragging');
+      };
+      const move = ev => {
+        // Keep the window fully on screen: no off-screen repaint, no stutter at the edges
+        tx = Math.min(Math.max(0, window.innerWidth - r.width), Math.max(0, ev.clientX - dx));
+        ty = Math.min(Math.max(28, window.innerHeight - r.height), Math.max(28, ev.clientY - dy));
+        if (!frame) frame = requestAnimationFrame(loop);
+      };
+      const up = () => {
+        dragging = false;
+        bar.removeEventListener('pointermove', move);
+        bar.removeEventListener('pointerup', up);
+        bar.removeEventListener('pointercancel', up);
+        if (!frame) frame = requestAnimationFrame(loop);
+      };
+      bar.addEventListener('pointermove', move);
+      bar.addEventListener('pointerup', up);
+      bar.addEventListener('pointercancel', up);
+    });
+    bar.addEventListener('dblclick', e => { if (!e.target.closest('.lights')) toggleMax(); });
+
+    // Resize by dragging any edge or corner
+    ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].forEach(d => {
+      const h = document.createElement('div');
+      h.className = 'rz rz-' + d;
+      win.appendChild(h);
+      h.addEventListener('pointerdown', e => {
+        if (e.button !== 0 || win.dataset.max || window.innerWidth <= 640) return;
+        e.preventDefault(); e.stopPropagation();
+        focusWin(win);
+        win.classList.remove('resizing');
+        win.getAnimations().forEach(a => a.finish());
+        const r = win.getBoundingClientRect();
+        const sx = e.clientX, sy = e.clientY;
+        const MINW = 360, MINH = 240;
+        let last = e, frame = null;
+        document.body.classList.add('sizing');
+        h.setPointerCapture(e.pointerId);
+        const apply = () => {
+          frame = null;
+          const mx = last.clientX - sx, my = last.clientY - sy;
+          let L = r.left, T = r.top, W = r.width, H = r.height;
+          if (d.includes('e')) W = Math.min(window.innerWidth - L, Math.max(MINW, r.width + mx));
+          if (d.includes('s')) H = Math.min(window.innerHeight - T, Math.max(MINH, r.height + my));
+          if (d.includes('w')) { L = Math.max(0, Math.min(r.right - MINW, r.left + mx)); W = r.right - L; }
+          if (d.includes('n')) { T = Math.max(28, Math.min(r.bottom - MINH, r.top + my)); H = r.bottom - T; }
+          win.style.left = L + 'px'; win.style.top = T + 'px';
+          win.style.width = W + 'px'; win.style.height = H + 'px';
+        };
+        const move = ev => { last = ev; if (!frame) frame = requestAnimationFrame(apply); };
+        const up = () => {
+          h.removeEventListener('pointermove', move);
+          h.removeEventListener('pointerup', up);
+          h.removeEventListener('pointercancel', up);
+          document.body.classList.remove('sizing');
+        };
+        h.addEventListener('pointermove', move);
+        h.addEventListener('pointerup', up);
+        h.addEventListener('pointercancel', up);
+      });
+    });
+  });
+
+  // Theme toggle (warm dark), saved between visits
+  const themeBtn = document.getElementById('themeBtn');
+  const applyTheme = dark => {
+    document.documentElement.classList.toggle('dark', dark);
+    try { localStorage.setItem('bio-theme', dark ? 'dark' : 'light'); } catch (e) {}
+  };
+  themeBtn.addEventListener('click', () => {
+    const dark = !document.documentElement.classList.contains('dark');
+    applyTheme(dark);
+  });
+
+  // Notes: autosave to this browser
+  const noteText = document.getElementById('noteText');
+  const noteStatus = document.getElementById('noteStatus');
+  document.getElementById('noteDate').textContent =
+    new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+  try { noteText.value = localStorage.getItem('bio-note') || ''; } catch (e) {}
+  let noteTimer = null;
+  noteText.addEventListener('input', () => {
+    noteStatus.textContent = 'Сохраняю…';
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(() => {
+      try { localStorage.setItem('bio-note', noteText.value); } catch (e) {}
+      noteStatus.textContent = 'Сохранено';
+    }, 450);
+  });
+
+
+  document.querySelectorAll('[data-open]').forEach(b =>
+    b.addEventListener('click', e => { e.stopPropagation(); openApp(b.dataset.open); }));
+  document.querySelectorAll('a.pill[href="#"]').forEach(a =>
+    a.addEventListener('click', e => e.preventDefault()));
+</script>
+</body>
+</html>
